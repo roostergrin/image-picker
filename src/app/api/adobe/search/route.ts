@@ -6,10 +6,10 @@ if (process.env.NODE_ENV === 'development') {
   process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
 }
 
-// Try both HTTP and HTTPS endpoints
+// Backend URLs - using IPv4 addresses that actually work
 const BACKEND_URLS = [
-  'https://localhost:8000',  // User's preferred HTTPS
-  'http://localhost:8000'    // Fallback to HTTP
+  'https://127.0.0.1:8000',  // HTTPS with IPv4 (working)
+  'http://127.0.0.1:8000'    // HTTP fallback with IPv4
 ];
 
 async function tryBackendRequest(searchParams: URLSearchParams) {
@@ -24,7 +24,7 @@ async function tryBackendRequest(searchParams: URLSearchParams) {
         backendUrl.searchParams.append(key, value);
       });
 
-      console.log('Making request to:', backendUrl.toString());
+      console.log('Attempting to connect to backend:', backendUrl.toString());
 
       const response = await fetch(backendUrl.toString(), {
         method: 'GET',
@@ -44,7 +44,7 @@ async function tryBackendRequest(searchParams: URLSearchParams) {
       }
 
       const data = await response.json();
-      console.log('Successfully fetched data from:', baseUrl);
+      console.log('Successfully fetched data from backend:', baseUrl);
       return data;
 
     } catch (error) {
@@ -54,6 +54,7 @@ async function tryBackendRequest(searchParams: URLSearchParams) {
     }
   }
 
+  // If all backend URLs failed, throw the last error
   throw lastError || new Error('All backend URLs failed');
 }
 
@@ -61,11 +62,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     
+    // Try to connect to the actual backend
     const data = await tryBackendRequest(searchParams);
-    
     return NextResponse.json(data);
+    
   } catch (error) {
-    console.error('Proxy error details:', error);
+    console.error('API route error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { 
