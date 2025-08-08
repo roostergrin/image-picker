@@ -64,12 +64,18 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
     // From: https://licensed-adobe-assets.s3.amazonaws.com/adobe-stock-images/filename.jpg
     // To: https://ik.imagekit.io/rooster/filename.jpg
     
-    if (url.includes('licensed-adobe-assets.s3.amazonaws.com/adobe-stock-images/')) {
-      const filename = url.split('/').pop(); // Get the filename from the URL
-      return `https://ik.imagekit.io/rooster/${filename}`;
+    try {
+      if (url && url.includes('licensed-adobe-assets.s3.amazonaws.com/adobe-stock-images/')) {
+        const filename = url.split('/').pop();
+        if (filename) {
+          return `https://ik.imagekit.io/rooster/${filename}`;
+        }
+      }
+    } catch (error) {
+      console.error('Error converting to ImageKit URL:', error, 'Original URL:', url);
     }
     
-    // If it's not an S3 URL, return as is
+    // If it's not an S3 URL or conversion failed, return as is
     return url;
   }, []);
 
@@ -118,6 +124,8 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
             onClick={() => {
               const imageUrl = getImageUrl(image);
               const imageKitUrl = convertToImageKitUrl(imageUrl);
+              console.log('Original URL:', imageUrl);
+              console.log('ImageKit URL:', imageKitUrl);
               onCopyUrl(imageKitUrl, 'ImageKit URL');
             }}
           >
@@ -148,6 +156,8 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
                       e.stopPropagation();
                       const imageUrl = getImageUrl(image);
                       const imageKitUrl = convertToImageKitUrl(imageUrl);
+                      console.log('Hover action - Original URL:', imageUrl);
+                      console.log('Hover action - ImageKit URL:', imageKitUrl);
                       onCopyUrl(imageKitUrl, 'ImageKit URL');
                     }}
                     className="p-2 bg-green-600 text-white rounded-full hover:bg-green-700"

@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 
-// Disable SSL verification for localhost development
-if (process.env.NODE_ENV === 'development') {
-  process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
-}
+// No SSL required for local backend
 
 async function testConnection(url: string): Promise<{ url: string; status: string; details?: string }> {
   try {
@@ -35,11 +32,9 @@ export async function GET() {
   // Test common ports and endpoints
   const testUrls = [
     'http://localhost:8000',
-    'https://localhost:8000',
     'http://localhost:8000/health',
     'http://localhost:8000/docs',
     'http://localhost:8000/auth/adobe/search-licensed',
-    'https://localhost:8000/auth/adobe/search-licensed',
     'http://localhost:3001',
     'http://localhost:5000',
     'http://localhost:8080',

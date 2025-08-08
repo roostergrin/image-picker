@@ -29,13 +29,13 @@ export function Toast({ message, type, onClose }: ToastProps) {
   );
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      <div className={`${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 min-w-[300px] animate-in slide-in-from-right-full duration-300`}>
-        <div className="flex-shrink-0">
+    <div className="fixed bottom-4 right-4 z-50 max-w-md">
+      <div className={`${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-start space-x-2 min-w-[300px] animate-in slide-in-from-right-full duration-300`}>
+        <div className="flex-shrink-0 mt-0.5">
           {icon}
         </div>
-        <div className="flex-1">
-          <p className="text-sm font-medium">{message}</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium break-words">{message}</p>
         </div>
         <button
           onClick={onClose}

@@ -33,6 +33,7 @@ export interface SearchFilters {
   keywords?: string;
   category?: string;
   creator?: string;
+  keywordMode?: 'OR' | 'AND';
 }
 
 export interface SearchResponse {
@@ -78,6 +79,7 @@ export default function Home() {
       if (filters.keywords) params.append('keywords', filters.keywords);
       if (filters.category) params.append('category', filters.category);
       if (filters.creator) params.append('creator', filters.creator);
+      if (filters.keywordMode) params.append('keywordMode', filters.keywordMode);
       
       const limit = 20; // Use static limit instead of pagination.limit
       params.append('limit', limit.toString());
@@ -132,12 +134,53 @@ export default function Home() {
 
   const copyToClipboard = useCallback(async (text: string, label: string) => {
     try {
+      // Check if clipboard API is available
+      if (!navigator.clipboard) {
+        throw new Error('Clipboard API not available');
+      }
+
+      // Check if we're in a secure context
+      if (!window.isSecureContext) {
+        throw new Error('Secure context required');
+      }
+
       await navigator.clipboard.writeText(text);
       setToast({ message: `${label} copied to clipboard!`, type: 'success' });
       setTimeout(() => setToast(null), 3000);
     } catch (err) {
-      setToast({ message: `Failed to copy ${label}`, type: 'error' });
-      setTimeout(() => setToast(null), 3000);
+      console.error('Clipboard error:', err);
+      
+      // Fallback to legacy method
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          setToast({ message: `${label} copied to clipboard!`, type: 'success' });
+          setTimeout(() => setToast(null), 3000);
+        } else {
+          throw new Error('Legacy copy method failed');
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback copy error:', fallbackErr);
+        
+        // Show helpful error message with the URL so user can copy manually
+        const errorMessage = `Failed to copy ${label}. URL: ${text}`;
+        setToast({ message: errorMessage, type: 'error' });
+        setTimeout(() => setToast(null), 8000); // Longer timeout for manual copy
+        
+        // Also log to console for easy copying
+        console.log(`Copy this ${label}:`, text);
+      }
     }
   }, []);
 

@@ -8,6 +8,7 @@ interface SearchFiltersProps {
     keywords?: string;
     category?: string;
     creator?: string;
+    keywordMode?: 'OR' | 'AND';
   }) => void;
   loading: boolean;
 }
@@ -17,7 +18,8 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
   const [keywords, setKeywords] = useState('');
   const [category, setCategory] = useState('');
   const [creator, setCreator] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [keywordMode, setKeywordMode] = useState<'OR' | 'AND'>('AND');
+  const [showAdvanced, setShowAdvanced] = useState(true);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +28,7 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
       keywords: keywords.trim() || undefined,
       category: category.trim() || undefined,
       creator: creator.trim() || undefined,
+      keywordMode: keywords.trim() ? keywordMode : undefined,
     });
   };
 
@@ -34,6 +37,7 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
     setKeywords('');
     setCategory('');
     setCreator('');
+    setKeywordMode('OR');
     onSearch({});
   };
 
@@ -113,7 +117,7 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
         {/* Advanced Filters */}
         {showAdvanced && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
-            <div>
+            <div className="space-y-3">
               <label htmlFor="keywords" className="block text-sm font-medium text-gray-700 mb-1">
                 Keywords
               </label>
@@ -125,7 +129,40 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
                 placeholder="e.g., dental, healthcare, office"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
-              <p className="text-xs text-gray-500 mt-1">Comma-separated keywords</p>
+              
+              {/* Keyword Mode Selector */}
+              <div className="flex items-center space-x-4 pt-2">
+                <span className="text-xs text-gray-600 font-medium">Search mode:</span>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="keywordMode"
+                    value="OR"
+                    checked={keywordMode === 'OR'}
+                    onChange={(e) => setKeywordMode(e.target.value as 'OR' | 'AND')}
+                    className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <span className="ml-1 text-xs text-gray-700">OR</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="keywordMode"
+                    value="AND"
+                    checked={keywordMode === 'AND'}
+                    onChange={(e) => setKeywordMode(e.target.value as 'OR' | 'AND')}
+                    className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300"
+                  />
+                  <span className="ml-1 text-xs text-gray-700">AND</span>
+                </label>
+              </div>
+              
+              <p className="text-xs text-gray-500">
+                {keywordMode === 'OR' 
+                  ? 'Find images with any of the keywords (broader results)'
+                  : 'Find images with all of the keywords (more specific results)'
+                }
+              </p>
             </div>
 
             <div>

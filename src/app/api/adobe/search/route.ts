@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Disable SSL verification for localhost development
-// This is safe for localhost but should NOT be used in production
-if (process.env.NODE_ENV === 'development') {
-  process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
-}
+// No SSL needed for local development; use plain HTTP backend
 
-// Backend URLs - using IPv4 addresses that actually work
+// Backend URLs - prefer plain HTTP for local backend
 const BACKEND_URLS = [
-  'https://127.0.0.1:8000',  // HTTPS with IPv4 (working)
-  'http://127.0.0.1:8000'    // HTTP fallback with IPv4
+  'http://127.0.0.1:8000',
+  'http://localhost:8000'
 ];
 
 async function tryBackendRequest(searchParams: URLSearchParams) {
