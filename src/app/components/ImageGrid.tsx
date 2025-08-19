@@ -62,13 +62,13 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
   const convertToImageKitUrl = useCallback((url: string) => {
     // Convert S3 URL to ImageKit URL
     // From: https://licensed-adobe-assets.s3.amazonaws.com/adobe-stock-images/filename.jpg
-    // To: https://ik.imagekit.io/rooster/filename.jpg
+    // To: https://ik.imagekit.io/9ry3lupe5/licensed-adobe-assets/filename.jpg
     
     try {
       if (url && url.includes('licensed-adobe-assets.s3.amazonaws.com/adobe-stock-images/')) {
         const filename = url.split('/').pop();
         if (filename) {
-          return `https://ik.imagekit.io/rooster/${filename}`;
+          return `https://ik.imagekit.io/9ry3lupe5/licensed-adobe-assets/${filename}`;
         }
       }
     } catch (error) {
