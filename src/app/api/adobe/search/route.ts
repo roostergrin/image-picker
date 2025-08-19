@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// No SSL needed for local development; use plain HTTP backend
-
-// Backend URLs - prefer plain HTTP for local backend
-const BACKEND_URLS = [
-  'http://127.0.0.1:8000',
-  'http://localhost:8000'
-];
+import { BACKEND_URLS } from '@/config/backend';
 
 async function tryBackendRequest(searchParams: URLSearchParams) {
   let lastError: Error | null = null;

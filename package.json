@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "build:prod": "NODE_ENV=production NEXT_PUBLIC_USE_PRODUCTION_BACKEND=true next build",
     "start": "next start",
     "lint": "next lint"
   },

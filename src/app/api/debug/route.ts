@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-
-// No SSL required for local backend
+import { getDebugUrls } from '@/config/backend';
 
 async function testConnection(url: string): Promise<{ url: string; status: string; details?: string }> {
   try {
@@ -29,17 +28,7 @@ async function testConnection(url: string): Promise<{ url: string; status: strin
 }
 
 export async function GET() {
-  // Test common ports and endpoints
-  const testUrls = [
-    'http://localhost:8000',
-    'http://localhost:8000/health',
-    'http://localhost:8000/docs',
-    'http://localhost:8000/auth/adobe/search-licensed',
-    'http://localhost:3001',
-    'http://localhost:5000',
-    'http://localhost:8080',
-    'http://127.0.0.1:8000',
-  ];
+  const testUrls = getDebugUrls();
 
   console.log('Running connectivity diagnostics...');
   
