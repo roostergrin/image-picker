@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BACKEND_URLS } from '@/config/backend';
 
-async function tryBackendRequest(searchParams: URLSearchParams) {
+// Helper function to get API key from request headers
+function getApiKeyFromRequest(request: NextRequest): string | null {
+  return request.headers.get('X-API-Key') || 
+         request.headers.get('x-api-key') ||
+         null;
+}
+
+async function tryBackendRequest(searchParams: URLSearchParams, apiKey: string | null) {
   let lastError: Error | null = null;
 
   for (const baseUrl of BACKEND_URLS) {
     try {
-      const backendUrl = new URL('/auth/adobe/search-licensed', baseUrl);
+      const backendUrl = new URL('/adobe/auth/search-licensed', baseUrl);
       
       // Copy all search parameters
       searchParams.forEach((value, key) => {
@@ -15,11 +22,23 @@ async function tryBackendRequest(searchParams: URLSearchParams) {
 
       console.log('Attempting to connect to backend:', backendUrl.toString());
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add X-API-Key header if available
+      if (apiKey) {
+        headers['X-API-Key'] = apiKey;
+        console.log('🔑 Adding X-API-Key header to request');
+      } else {
+        console.log('❌ No X-API-Key found in request headers');
+      }
+
+      console.log('📤 Request headers:', Object.keys(headers));
+
       const response = await fetch(backendUrl.toString(), {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         // Add timeout to prevent hanging
         signal: AbortSignal.timeout(10000), // 10 second timeout
       });
@@ -51,8 +70,15 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     
+    // Extract API key from request headers
+    const apiKey = getApiKeyFromRequest(request);
+    console.log('🔍 Incoming request headers check:');
+    console.log('  - X-API-Key:', request.headers.get('X-API-Key') ? '✅ Present' : '❌ Missing');
+    console.log('  - x-api-key:', request.headers.get('x-api-key') ? '✅ Present' : '❌ Missing');
+    console.log('  - Extracted apiKey:', apiKey ? '✅ Found' : '❌ Not found');
+    
     // Try to connect to the actual backend
-    const data = await tryBackendRequest(searchParams);
+    const data = await tryBackendRequest(searchParams, apiKey);
     return NextResponse.json(data);
     
   } catch (error) {

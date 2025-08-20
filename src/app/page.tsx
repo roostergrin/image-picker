@@ -6,6 +6,7 @@ import { ImageGrid } from './components/ImageGrid';
 import { ImageModal } from './components/ImageModal';
 import { Pagination } from './components/Pagination';
 import { Toast } from './components/Toast';
+import { apiClient, setInMemoryInternalApiKey } from '../services/apiService';
 
 export interface AdobeStockImage {
   id: number;
@@ -54,6 +55,95 @@ export interface SearchResponse {
 
 const API_BASE_URL = '/api';
 
+declare global {
+  interface Window { __INTERNAL_API_TOKEN__?: string }
+}
+
+const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [token, setToken] = useState('');
+  const [verified, setVerified] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  // Attempt to load and verify a saved token on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('INTERNAL_API_TOKEN') || localStorage.getItem('internalApiToken');
+    if (!saved) return;
+    setToken(saved);
+    setInMemoryInternalApiKey(saved);
+    window.__INTERNAL_API_TOKEN__ = saved;
+    (async () => {
+      setChecking(true);
+      try {
+        await apiClient.get('/api/health');
+        setVerified(true);
+      } catch {
+        setInMemoryInternalApiKey(null);
+        window.__INTERNAL_API_TOKEN__ = undefined;
+        localStorage.removeItem('INTERNAL_API_TOKEN');
+        localStorage.removeItem('internalApiToken');
+      } finally {
+        setChecking(false);
+      }
+    })();
+  }, []);
+
+  const verify = async () => {
+    setChecking(true);
+    setError(null);
+    try {
+      setInMemoryInternalApiKey(token);
+      window.__INTERNAL_API_TOKEN__ = token;
+      await apiClient.get('/api/health');
+      setVerified(true);
+      try {
+        localStorage.setItem('INTERNAL_API_TOKEN', token);
+      } catch {
+        // ignore storage failures
+      }
+    } catch {
+      setInMemoryInternalApiKey(null);
+      window.__INTERNAL_API_TOKEN__ = undefined;
+      setError('Invalid token');
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  if (verified) return <>{children}</>;
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h2 className="text-xl font-semibold mb-2">Internal Access</h2>
+        <p className="text-gray-600 mb-4">Paste your internal access token to continue.</p>
+        <input
+          className="w-full p-3 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          type="password"
+          value={token}
+          onChange={e => setToken(e.target.value)}
+          onKeyDown={e => {
+            if (e.key !== 'Enter') return;
+            if (!token || checking) return;
+            verify();
+          }}
+          placeholder="Enter token"
+          aria-label="Internal access token"
+        />
+        {error && <div className="text-red-600 mb-4" role="alert">{error}</div>}
+        <button
+          className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          onClick={verify}
+          disabled={!token || checking}
+          aria-label={checking ? 'Verifying' : 'Continue'}
+        >
+          {checking ? 'Verifying…' : 'Continue'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function Home() {
   const [images, setImages] = useState<AdobeStockImage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,13 +175,8 @@ export default function Home() {
       params.append('limit', limit.toString());
       params.append('offset', ((page - 1) * limit).toString());
 
-      const response = await fetch(`${API_BASE_URL}/adobe/search?${params}`);
-      
-      if (!response.ok) {
-        throw new Error(`Search failed: ${response.statusText}`);
-      }
-
-      const data: SearchResponse = await response.json();
+      const response = await apiClient.get(`${API_BASE_URL}/adobe/search?${params}`);
+      const data: SearchResponse = response.data;
       
       setImages(data.search_results);
       setPagination({
@@ -185,20 +270,21 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Adobe Stock Image Picker</h1>
-              <p className="text-sm text-gray-600">
-                Browse and select from your licensed Adobe Stock images
-              </p>
+    <TokenGate>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Adobe Stock Image Picker</h1>
+                <p className="text-sm text-gray-600">
+                  Browse and select from your licensed Adobe Stock images
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search Filters */}
@@ -288,6 +374,7 @@ export default function Home() {
           onClose={() => setToast(null)}
         />
       )}
-    </div>
+      </div>
+    </TokenGate>
   );
 }
