@@ -64,26 +64,38 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   // Attempt to load and verify a saved token on mount
   useEffect(() => {
     const saved = localStorage.getItem('INTERNAL_API_TOKEN') || localStorage.getItem('internalApiToken');
-    if (!saved) return;
+    
+    if (!saved) {
+      setInitialized(true);
+      return;
+    }
+    
     setToken(saved);
     setInMemoryInternalApiKey(saved);
     window.__INTERNAL_API_TOKEN__ = saved;
+    
     (async () => {
       setChecking(true);
+      setError(null);
       try {
         await apiClient.get('/api/health');
         setVerified(true);
-      } catch {
+      } catch (err) {
         setInMemoryInternalApiKey(null);
         window.__INTERNAL_API_TOKEN__ = undefined;
         localStorage.removeItem('INTERNAL_API_TOKEN');
         localStorage.removeItem('internalApiToken');
+        setVerified(false);
+        setToken('');
+        console.error('Token verification failed:', err);
       } finally {
         setChecking(false);
+        setInitialized(true);
       }
     })();
   }, []);
@@ -91,26 +103,62 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const verify = async () => {
     setChecking(true);
     setError(null);
+    setVerified(false); // Reset verified state before attempting verification
+    
     try {
       setInMemoryInternalApiKey(token);
       window.__INTERNAL_API_TOKEN__ = token;
-      await apiClient.get('/api/health');
-      setVerified(true);
-      try {
-        localStorage.setItem('INTERNAL_API_TOKEN', token);
-      } catch {
-        // ignore storage failures
+      const response = await apiClient.get('/api/health');
+      
+      // Only set verified to true if we get a successful response
+      if (response && response.status === 200) {
+        setVerified(true);
+        try {
+          localStorage.setItem('INTERNAL_API_TOKEN', token);
+        } catch {
+          // ignore storage failures
+        }
+      } else {
+        throw new Error('Health check failed');
       }
-    } catch {
+    } catch (err) {
       setInMemoryInternalApiKey(null);
       window.__INTERNAL_API_TOKEN__ = undefined;
-      setError('Invalid token');
+      setVerified(false);
+      
+      // Provide more specific error messages
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as any;
+        if (axiosError.response?.status === 401 || axiosError.response?.status === 403) {
+          setError('Invalid or expired token');
+        } else if (axiosError.response?.status >= 500) {
+          setError('Server error - please try again');
+        } else {
+          setError('Authentication failed');
+        }
+      } else {
+        setError('Unable to verify token - check your connection');
+      }
+      console.error('Token verification failed:', err);
     } finally {
       setChecking(false);
     }
   };
 
-  if (verified) return <>{children}</>;
+  // Only render children if explicitly verified and initialized
+  if (verified && initialized && !checking) return <>{children}</>;
+  
+  // Show loading state during initialization
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -121,7 +169,11 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           className="w-full p-3 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
           type="password"
           value={token}
-          onChange={e => setToken(e.target.value)}
+          onChange={e => {
+            setToken(e.target.value);
+            // Clear error when user starts typing
+            if (error) setError(null);
+          }}
           onKeyDown={e => {
             if (e.key !== 'Enter') return;
             if (!token || checking) return;
@@ -129,6 +181,7 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           }}
           placeholder="Enter token"
           aria-label="Internal access token"
+          disabled={checking}
         />
         {error && <div className="text-red-600 mb-4" role="alert">{error}</div>}
         <button

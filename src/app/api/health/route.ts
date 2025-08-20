@@ -38,7 +38,15 @@ async function tryBackendHealthCheck(apiKey: string | null) {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Backend health check error:', errorText);
-        throw new Error(`Backend health check failed: ${response.status} ${response.statusText} - ${errorText}`);
+        
+        // Return more specific error information for authentication failures
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(`Authentication failed: Invalid or expired API key`);
+        } else if (response.status >= 500) {
+          throw new Error(`Backend server error: ${response.status} ${response.statusText}`);
+        } else {
+          throw new Error(`Backend health check failed: ${response.status} ${response.statusText} - ${errorText}`);
+        }
       }
 
       const data = await response.json();
@@ -68,14 +76,26 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Health API route error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Determine appropriate status code based on error type
+    let statusCode = 500;
+    if (errorMessage.includes('Authentication failed') || errorMessage.includes('Invalid or expired API key')) {
+      statusCode = 401;
+    } else if (errorMessage.includes('Backend server error')) {
+      statusCode = 502; // Bad Gateway - backend server error
+    } else if (errorMessage.includes('All backend health checks failed')) {
+      statusCode = 503; // Service Unavailable - all backends down
+    }
+    
     return NextResponse.json(
       { 
         error: 'Backend health check failed',
         details: errorMessage,
         timestamp: new Date().toISOString(),
-        triedUrls: BACKEND_URLS
+        triedUrls: BACKEND_URLS,
+        authenticated: statusCode !== 401
       },
-      { status: 500 }
+      { status: statusCode }
     );
   }
 }
