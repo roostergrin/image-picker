@@ -1,6 +1,14 @@
 // Backend configuration based on environment
 const getBackendUrls = () => {
-  const useProduction = process.env.NEXT_PUBLIC_USE_PRODUCTION_BACKEND === 'true';
+  // Check multiple indicators for production environment
+  const useProduction = 
+    process.env.NEXT_PUBLIC_USE_PRODUCTION_BACKEND === 'true' ||
+    process.env.NODE_ENV === 'production' ||
+    typeof window !== 'undefined' && (
+      window.location.hostname !== 'localhost' && 
+      window.location.hostname !== '127.0.0.1' &&
+      !window.location.hostname.includes('localhost')
+    );
   
   if (useProduction) {
     // Production build: try production first, then local fallback
