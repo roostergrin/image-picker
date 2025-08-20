@@ -42,77 +42,87 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Main Search */}
-        <div>
-          <label htmlFor="query" className="block text-sm font-medium text-gray-700 mb-1">
-            Search Images
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              id="query"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by title, description, or keywords..."
-              className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+    <>
+      {/* Sticky Search Bar */}
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <form onSubmit={handleSubmit}>
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label htmlFor="query" className="block text-sm font-medium text-gray-700 mb-1">
+                  Search Images
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="query"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search by title, description, or keywords..."
+                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Clear
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md flex items-center"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Searching...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      Search
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
+          </form>
         </div>
+      </div>
 
-        {/* Advanced Filters Toggle */}
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-          >
-            {showAdvanced ? 'Hide' : 'Show'} Advanced Filters
-            <svg 
-              className={`inline ml-1 h-4 w-4 transform transition-transform ${showAdvanced ? 'rotate-180' : ''}`} 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+      {/* Advanced Filters */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <form onSubmit={handleSubmit} className="space-y-4">
 
-          <div className="flex space-x-2">
+          {/* Advanced Filters Toggle */}
+          <div className="flex items-center justify-between">
             <button
               type="button"
-              onClick={handleClear}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
             >
-              Clear
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md flex items-center"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Searching...
-                </>
-              ) : (
-                <>
-                  <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  Search
-                </>
-              )}
+              {showAdvanced ? 'Hide' : 'Show'} Advanced Filters
+              <svg 
+                className={`inline ml-1 h-4 w-4 transform transition-transform ${showAdvanced ? 'rotate-180' : ''}`} 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
           </div>
-        </div>
 
         {/* Advanced Filters */}
         {showAdvanced && (
@@ -209,7 +219,8 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
             </button>
           ))}
         </div>
-      </form>
-    </div>
+        </form>
+      </div>
+    </>
   );
 } 

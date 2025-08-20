@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { SearchFilters } from './components/SearchFilters';
 import { ImageGrid } from './components/ImageGrid';
 import { ImageModal } from './components/ImageModal';
-import { Pagination } from './components/Pagination';
 import { Toast } from './components/Toast';
 import { apiClient, setInMemoryInternalApiKey } from '../services/apiService';
 
@@ -128,7 +127,7 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       
       // Provide more specific error messages
       if (err && typeof err === 'object' && 'response' in err) {
-        const axiosError = err as any;
+        const axiosError = err as { response?: { status?: number } };
         if (axiosError.response?.status === 401 || axiosError.response?.status === 403) {
           setError('Invalid or expired token');
         } else if (axiosError.response?.status >= 500) {
@@ -200,6 +199,7 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 export default function Home() {
   const [images, setImages] = useState<AdobeStockImage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<AdobeStockImage | null>(null);
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
@@ -211,8 +211,12 @@ export default function Home() {
   });
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  const searchImages = useCallback(async (filters: SearchFilters, page: number = 1) => {
-    setLoading(true);
+  const searchImages = useCallback(async (filters: SearchFilters, page: number = 1, append: boolean = false) => {
+    if (page === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     setError(null);
 
     try {
@@ -231,7 +235,16 @@ export default function Home() {
       const response = await apiClient.get(`${API_BASE_URL}/adobe/search?${params}`);
       const data: SearchResponse = response.data;
       
-      setImages(data.search_results);
+      if (append) {
+        setImages(prev => {
+          const existingIds = new Set(prev.map(img => img.id));
+          const newImages = data.search_results.filter(img => !existingIds.has(img.id));
+          return [...prev, ...newImages];
+        });
+      } else {
+        setImages(data.search_results);
+      }
+      
       setPagination({
         total_count: data.pagination.total_count,
         current_page: page,
@@ -244,6 +257,7 @@ export default function Home() {
       console.error('Search error:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, []); // No dependencies needed now
 
@@ -252,14 +266,28 @@ export default function Home() {
     searchImages({});
   }, [searchImages]);
 
+  // Infinite scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      if (loadingMore || !pagination.has_more || loading) return;
+
+      const scrollTop = window.pageYOffset;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+
+      // Load more when user is within 1000px of the bottom
+      if (scrollTop + windowHeight >= documentHeight - 1000) {
+        searchImages(searchFilters, pagination.current_page + 1, true);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [searchImages, searchFilters, pagination, loadingMore, loading]);
+
   const handleSearch = (filters: SearchFilters) => {
     setSearchFilters(filters);
     searchImages(filters, 1);
-  };
-
-  const handlePageChange = (page: number) => {
-    searchImages(searchFilters, page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleImageSelect = (image: AdobeStockImage) => {
@@ -325,25 +353,10 @@ export default function Home() {
   return (
     <TokenGate>
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Adobe Stock Image Picker</h1>
-                <p className="text-sm text-gray-600">
-                  Browse and select from your licensed Adobe Stock images
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search Filters */}
-        <div className="mb-8">
-          <SearchFilters onSearch={handleSearch} loading={loading} />
-        </div>
+        <SearchFilters onSearch={handleSearch} loading={loading} />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Results Summary */}
         {!loading && (
@@ -377,23 +390,28 @@ export default function Home() {
 
         {/* Image Grid */}
         {!loading && images.length > 0 && (
-          <ImageGrid 
-            images={images} 
-            onImageSelect={handleImageSelect}
-            onCopyUrl={copyToClipboard}
-          />
-        )}
-
-        {/* Pagination */}
-        {!loading && images.length > 0 && (
-          <div className="mt-8">
-            <Pagination
-              currentPage={pagination.current_page}
-              totalCount={pagination.total_count}
-              pageSize={pagination.limit}
-              onPageChange={handlePageChange}
+          <>
+            <ImageGrid 
+              images={images} 
+              onImageSelect={handleImageSelect}
+              onCopyUrl={copyToClipboard}
             />
-          </div>
+            
+            {/* Loading More Indicator */}
+            {loadingMore && (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-gray-600">Loading more images...</span>
+              </div>
+            )}
+            
+            {/* End of Results Indicator */}
+            {!pagination.has_more && images.length > 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-500">You&apos;ve reached the end of the results</p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Empty State */}

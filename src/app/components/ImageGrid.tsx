@@ -34,6 +34,38 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
   const [hoveredImage, setHoveredImage] = useState<number | null>(null);
   const [loadingImages, setLoadingImages] = useState<Set<number>>(new Set());
 
+  // Filter out .ai files and non-photo files
+  const filteredImages = useMemo(() => {
+    return images.filter(image => {
+      const imageUrl = image.s3_url || image.comp_url || image.thumbnail_url;
+      if (!imageUrl) return false;
+      
+      // Check for .ai extension
+      if (imageUrl.toLowerCase().includes('.ai')) return false;
+      
+      // Check for common photo file extensions
+      const photoExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+      const hasPhotoExtension = photoExtensions.some(ext => 
+        imageUrl.toLowerCase().includes(ext)
+      );
+      
+      // If no photo extension found, check title for photo-related terms
+      if (!hasPhotoExtension) {
+        const title = image.title?.toLowerCase() || '';
+        const isPhotoContent = title.includes('photo') || 
+                              title.includes('image') || 
+                              title.includes('picture') ||
+                              !title.includes('vector') &&
+                              !title.includes('illustration') &&
+                              !title.includes('graphic') &&
+                              !title.includes('design');
+        return isPhotoContent;
+      }
+      
+      return true;
+    });
+  }, [images]);
+
   const handleImageLoad = useCallback((imageId: number) => {
     setLoadingImages(prev => {
       const newSet = new Set(prev);
@@ -79,17 +111,7 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
     return url;
   }, []);
 
-  const formatDate = useCallback((dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch {
-      return dateString;
-    }
-  }, []);
 
-  const truncateText = useCallback((text: string, maxLength: number) => {
-    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-  }, []);
 
   // Memoize image handlers per image ID to prevent recreation
   const imageHandlers = useMemo(() => {
@@ -99,7 +121,7 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
       onError: () => void;
     }> = {};
     
-    images.forEach(image => {
+    filteredImages.forEach(image => {
       handlers[image.id] = {
         onLoadStart: () => handleImageLoadStart(image.id),
         onLoad: () => handleImageLoad(image.id),
@@ -108,17 +130,17 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
     });
     
     return handlers;
-  }, [images, handleImageLoad, handleImageError, handleImageLoadStart]);
+  }, [filteredImages, handleImageLoad, handleImageError, handleImageLoadStart]);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-      {images.map((image) => {
+    <div className="flex flex-wrap gap-4 justify-center">
+      {filteredImages.map((image) => {
         const handlers = imageHandlers[image.id];
         
         return (
           <div
             key={image.id}
-            className="group bg-white rounded-lg shadow-sm border overflow-hidden hover:shadow-md cursor-pointer"
+            className="group bg-white overflow-hidden cursor-pointer rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 flex-shrink-0"
             onMouseEnter={() => setHoveredImage(image.id)}
             onMouseLeave={() => setHoveredImage(null)}
             onClick={() => {
@@ -130,7 +152,10 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
             }}
           >
             {/* Image Container */}
-            <div className="relative aspect-square bg-gray-100">
+            <div 
+              className="relative bg-gray-100 flex items-center justify-center"
+              style={{ height: '200px' }}
+            >
               {loadingImages.has(image.id) && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -140,12 +165,13 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
               <Image
                 src={getImageUrl(image)}
                 alt={image.title || `Adobe Stock Image ${image.id}`}
-                fill
-                className="object-cover"
+                height={200}
+                width={0}
+                className="object-contain h-full w-auto"
                 onLoadStart={handlers.onLoadStart}
                 onLoad={handlers.onLoad}
                 onError={handlers.onError}
-                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                sizes="200px"
               />
 
               {/* Overlay with Quick Actions */}
@@ -199,63 +225,6 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
                 </div>
               )}
 
-              {/* License Status Badge */}
-              <div className="absolute top-2 left-2">
-                <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                  Licensed
-                </span>
-              </div>
-
-              {/* ImageKit Available Badge */}
-              {image.s3_url && (
-                <div className="absolute top-2 right-2">
-                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                    ImageKit
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Image Info */}
-            <div className="p-3">
-              <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2" title={image.title}>
-                {truncateText(image.title, 50)}
-              </h3>
-              
-              <div className="space-y-1 text-xs text-gray-500">
-                <p>by {image.creator_name}</p>
-                <p>ID: {image.id}</p>
-                {image.category && (
-                  <p>Category: {truncateText(image.category, 20)}</p>
-                )}
-                <p>Licensed: {formatDate(image.license_date)}</p>
-              </div>
-
-              {/* Keywords Preview */}
-              {image.keywords && image.keywords.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {image.keywords.slice(0, 3).map((keyword, index) => (
-                    <span
-                      key={index}
-                      className="inline-block px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded"
-                    >
-                      {keyword}
-                    </span>
-                  ))}
-                  {image.keywords.length > 3 && (
-                    <span className="inline-block px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
-                      +{image.keywords.length - 3} more
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Dimensions */}
-              {(image.width || image.height) && (
-                <div className="mt-2 text-xs text-gray-500">
-                  {image.width} × {image.height} px
-                </div>
-              )}
             </div>
           </div>
         );
