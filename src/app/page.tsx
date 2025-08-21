@@ -128,9 +128,10 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       // Provide more specific error messages
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosError = err as { response?: { status?: number } };
-        if (axiosError.response?.status === 401 || axiosError.response?.status === 403) {
+        const status = axiosError.response?.status;
+        if (status === 401 || status === 403) {
           setError('Invalid or expired token');
-        } else if (axiosError.response?.status >= 500) {
+        } else if (status && status >= 500) {
           setError('Server error - please try again');
         } else {
           setError('Authentication failed');
