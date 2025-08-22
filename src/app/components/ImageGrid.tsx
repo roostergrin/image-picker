@@ -196,7 +196,9 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
             return (
               <div
                 key={image.id}
-                className="group bg-white overflow-hidden cursor-pointer rounded-lg shadow-sm hover:shadow-md transition-all duration-300 relative"
+                className={`group bg-white overflow-hidden cursor-pointer transition-all duration-300 relative ${
+                  hoveredImage === image.id ? 'border-2 border-blue-500' : 'border-2 border-transparent'
+                }`}
                 onMouseEnter={() => setHoveredImage(image.id)}
                 onMouseLeave={() => setHoveredImage(null)}
                 onClick={() => {
@@ -218,48 +220,16 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
                   alt={image.title || `Adobe Stock Image ${image.id}`}
                   width={columnWidth}
                   height={image.calculatedHeight}
-                  className="w-full h-auto rounded-lg block"
+                  className="w-full h-auto block"
                   onLoadStart={handlers.onLoadStart}
                   onLoad={handlers.onLoad}
                   onError={handlers.onError}
                   sizes={`${columnWidth}px`}
                 />
 
-                {/* Overlay with Quick Actions */}
+                {/* Overlay with Eye Icon Only */}
                 {hoveredImage === image.id && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center space-x-2 rounded-lg">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const imageUrl = getImageUrl(image);
-                          const imageKitUrl = convertToImageKitUrl(imageUrl);
-                          console.log('Hover action - Original URL:', imageUrl);
-                          console.log('Hover action - ImageKit URL:', imageKitUrl);
-                          onCopyUrl(imageKitUrl, 'ImageKit URL');
-                        }}
-                        className="p-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
-                        title="Copy ImageKit URL"
-                      >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                        </svg>
-                      </button>
-                      
-                      {image.s3_url && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onCopyUrl(image.s3_url!, 'S3 URL');
-                          }}
-                          className="p-2 bg-white rounded-full hover:bg-gray-100 transition-colors"
-                          title="Copy S3 URL"
-                        >
-                          <svg className="h-4 w-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </button>
-                      )}
-
+                  <div className="absolute top-2 right-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

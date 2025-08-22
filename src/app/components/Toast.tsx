@@ -17,7 +17,7 @@ export function Toast({ message, type, onClose }: ToastProps) {
     return () => clearTimeout(timer);
   }, [onClose]);
 
-  const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+  const bgColor = type === 'success' ? 'bg-blue-500' : 'bg-red-500';
   const icon = type === 'success' ? (
     <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

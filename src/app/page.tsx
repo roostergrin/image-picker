@@ -355,24 +355,18 @@ export default function Home() {
     <TokenGate>
       <div className="min-h-screen bg-gray-50">
         {/* Search Filters */}
-        <SearchFilters onSearch={handleSearch} loading={loading} />
+        <SearchFilters 
+          onSearch={handleSearch} 
+          loading={loading} 
+          resultCount={!loading && pagination.total_count > 0 ? {
+            current: Math.min(pagination.current_page * pagination.limit, pagination.total_count),
+            total: pagination.total_count,
+            currentPage: pagination.current_page,
+            limit: pagination.limit
+          } : undefined}
+        />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Results Summary */}
-        {!loading && (
-          <div className="mb-6">
-            <p className="text-sm text-gray-600">
-              {pagination.total_count > 0 ? (
-                <>
-                  Showing {((pagination.current_page - 1) * pagination.limit) + 1} - {Math.min(pagination.current_page * pagination.limit, pagination.total_count)} of {pagination.total_count} images
-                </>
-              ) : (
-                'No images found'
-              )}
-            </p>
-          </div>
-        )}
 
         {/* Error State */}
         {error && (
