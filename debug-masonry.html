@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masonry Layout Debug</title>
+    <style>
+        .container {
+            width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        
+        .masonry-container {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+        
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .image-item {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .debug-info {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 2px 5px;
+            font-size: 12px;
+            border-radius: 3px;
+        }
+        
+        .image-item {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Masonry Layout Debug Test</h1>
+        <p>Container width: <span id="containerWidth">1200px</span></p>
+        <p>Columns: <span id="columnCount">4</span></p>
+        <p>Column width: <span id="columnWidth">285px</span></p>
+        
+        <div id="masonryContainer" class="masonry-container">
+            <!-- Columns will be generated here -->
+        </div>
+    </div>
+
+    <script>
+        // Test images with different aspect ratios
+        const testImages = [
+            { id: 1, width: 400, height: 300, src: 'https://picsum.photos/400/300?random=1' },
+            { id: 2, width: 300, height: 500, src: 'https://picsum.photos/300/500?random=2' },
+            { id: 3, width: 600, height: 400, src: 'https://picsum.photos/600/400?random=3' },
+            { id: 4, width: 400, height: 600, src: 'https://picsum.photos/400/600?random=4' },
+            { id: 5, width: 500, height: 300, src: 'https://picsum.photos/500/300?random=5' },
+            { id: 6, width: 300, height: 400, src: 'https://picsum.photos/300/400?random=6' },
+            { id: 7, width: 700, height: 300, src: 'https://picsum.photos/700/300?random=7' },
+            { id: 8, width: 400, height: 500, src: 'https://picsum.photos/400/500?random=8' },
+        ];
+
+        function createMasonryLayout() {
+            const container = document.getElementById('masonryContainer');
+            const containerWidth = 1200;
+            const gap = 16;
+            const columnCount = 4;
+            const columnWidth = (containerWidth - (columnCount - 1) * gap) / columnCount;
+            
+            // Update debug info
+            document.getElementById('containerWidth').textContent = containerWidth + 'px';
+            document.getElementById('columnCount').textContent = columnCount;
+            document.getElementById('columnWidth').textContent = Math.round(columnWidth) + 'px';
+            
+            // Create columns
+            const columns = [];
+            const columnHeights = [];
+            
+            for (let i = 0; i < columnCount; i++) {
+                const column = document.createElement('div');
+                column.className = 'column';
+                column.style.width = columnWidth + 'px';
+                container.appendChild(column);
+                columns.push(column);
+                columnHeights.push(0);
+            }
+            
+            // Add images to columns
+            testImages.forEach(image => {
+                const aspectRatio = image.width / image.height;
+                const calculatedHeight = columnWidth / aspectRatio;
+                
+                // Find shortest column
+                const shortestColumnIndex = columnHeights.indexOf(Math.min(...columnHeights));
+                
+                // Create image element
+                const imageItem = document.createElement('div');
+                imageItem.className = 'image-item';
+                imageItem.style.height = calculatedHeight + 'px';
+                
+                const img = document.createElement('img');
+                img.className = 'image';
+                img.src = image.src;
+                img.alt = `Test image ${image.id}`;
+                
+                const debugInfo = document.createElement('div');
+                debugInfo.className = 'debug-info';
+                debugInfo.textContent = `${image.width}x${image.height} → ${Math.round(calculatedHeight)}px`;
+                
+                imageItem.appendChild(img);
+                imageItem.appendChild(debugInfo);
+                
+                columns[shortestColumnIndex].appendChild(imageItem);
+                columnHeights[shortestColumnIndex] += calculatedHeight + gap;
+                
+                console.log(`Image ${image.id}: ${image.width}x${image.height} → column ${shortestColumnIndex}, height ${Math.round(calculatedHeight)}px`);
+            });
+        }
+        
+        createMasonryLayout();
+    </script>
+</body>
+</html>
