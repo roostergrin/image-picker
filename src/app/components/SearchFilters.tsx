@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { ContentData } from '../../utils/contentKeywordExtractor';
 
 interface SearchFiltersProps {
   onSearch: (filters: {
@@ -9,6 +10,7 @@ interface SearchFiltersProps {
     category?: string;
     creator?: string;
     keywordMode?: 'OR' | 'AND';
+    content?: ContentData;
   }) => void;
   loading: boolean;
   resultCount?: {
@@ -27,15 +29,67 @@ export function SearchFilters({ onSearch, loading, resultCount }: SearchFiltersP
   const [keywordMode, setKeywordMode] = useState<'OR' | 'AND'>('AND');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+
+  const triggerSearch = useCallback(() => {
+    // Smart keyword detection: if query contains commas and keywordMode is set to AND,
+    // move the query to keywords to enable AND/OR logic
+    let finalQuery = query.trim() || undefined;
+    let finalKeywords = keywords.trim() || undefined;
+    let finalKeywordMode = keywords.trim() ? keywordMode : undefined;
+    
+    // If query contains commas and looks like keywords, and we're in AND mode, move to keywords field
+    if (finalQuery && finalQuery.includes(',') && keywordMode === 'AND' && !finalKeywords) {
+      finalKeywords = finalQuery;
+      finalQuery = undefined; // Clear query since we moved it to keywords
+      finalKeywordMode = keywordMode;
+    }
+    
     onSearch({
-      query: query.trim() || undefined,
-      keywords: keywords.trim() || undefined,
+      query: finalQuery,
+      keywords: finalKeywords,
       category: category.trim() || undefined,
       creator: creator.trim() || undefined,
-      keywordMode: keywords.trim() ? keywordMode : undefined,
+      keywordMode: finalKeywordMode,
     });
+  }, [onSearch, query, keywords, category, creator, keywordMode]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    triggerSearch();
+  };
+
+  const handleKeywordModeChange = (newMode: 'OR' | 'AND') => {
+    console.log('Keyword mode changed to:', newMode);
+    console.log('Current query:', query);
+    console.log('Current keywords:', keywords);
+    setKeywordMode(newMode);
+    
+    // Trigger search if there are any search terms (query or keywords)
+    if (query.trim() || keywords.trim()) {
+      console.log('Triggering search with mode:', newMode);
+      // Use setTimeout to ensure state update happens first
+      setTimeout(() => {
+        // Smart keyword detection: same logic as triggerSearch
+        let finalQuery = query.trim() || undefined;
+        let finalKeywords = keywords.trim() || undefined;
+        
+        // If query contains commas and looks like keywords, and we're in AND mode, move to keywords field
+        if (finalQuery && finalQuery.includes(',') && newMode === 'AND' && !finalKeywords) {
+          finalKeywords = finalQuery;
+          finalQuery = undefined; // Clear query since we moved it to keywords
+        }
+        
+        onSearch({
+          query: finalQuery,
+          keywords: finalKeywords,
+          category: category.trim() || undefined,
+          creator: creator.trim() || undefined,
+          keywordMode: newMode,
+        });
+      }, 0);
+    } else {
+      console.log('No search terms found, not triggering search');
+    }
   };
 
   const handleClear = () => {
@@ -73,6 +127,43 @@ export function SearchFilters({ onSearch, loading, resultCount }: SearchFiltersP
                     </svg>
                   </div>
                 </div>
+              </div>
+              
+              {/* Keyword Mode Toggle in Top Bar */}
+              <div className="flex flex-col">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Keyword Mode
+                </label>
+                <div className="flex items-center bg-gray-50 rounded-md p-1 border border-gray-300">
+                  <button
+                    type="button"
+                    onClick={() => handleKeywordModeChange('OR')}
+                    className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
+                      keywordMode === 'OR' 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    OR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleKeywordModeChange('AND')}
+                    className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
+                      keywordMode === 'AND' 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    AND
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {keywordMode === 'OR' 
+                    ? 'Find any keyword' 
+                    : 'Find all keywords'
+                  }
+                </p>
               </div>
               <div className="flex items-center space-x-4">
                 {/* Results Count */}
@@ -152,38 +243,8 @@ export function SearchFilters({ onSearch, loading, resultCount }: SearchFiltersP
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
               
-              {/* Keyword Mode Selector */}
-              <div className="flex items-center space-x-4 pt-2">
-                <span className="text-xs text-gray-600 font-medium">Search mode:</span>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="keywordMode"
-                    value="OR"
-                    checked={keywordMode === 'OR'}
-                    onChange={(e) => setKeywordMode(e.target.value as 'OR' | 'AND')}
-                    className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300"
-                  />
-                  <span className="ml-1 text-xs text-gray-700">OR</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="keywordMode"
-                    value="AND"
-                    checked={keywordMode === 'AND'}
-                    onChange={(e) => setKeywordMode(e.target.value as 'OR' | 'AND')}
-                    className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300"
-                  />
-                  <span className="ml-1 text-xs text-gray-700">AND</span>
-                </label>
-              </div>
-              
-              <p className="text-xs text-gray-500">
-                {keywordMode === 'OR' 
-                  ? 'Find images with any of the keywords (broader results)'
-                  : 'Find images with all of the keywords (more specific results)'
-                }
+              <p className="text-xs text-gray-500 mt-2">
+                Use the keyword mode selector in the top bar to choose between OR (any keyword) or AND (all keywords)
               </p>
             </div>
 

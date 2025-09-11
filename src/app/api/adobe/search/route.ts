@@ -77,6 +77,22 @@ export async function GET(request: NextRequest) {
     console.log('  - x-api-key:', request.headers.get('x-api-key') ? '✅ Present' : '❌ Missing');
     console.log('  - Extracted apiKey:', apiKey ? '✅ Found' : '❌ Not found');
     
+    // Handle content parameter if provided
+    const contentParam = searchParams.get('content');
+    if (contentParam) {
+      try {
+        const contentData = JSON.parse(contentParam);
+        console.log('📄 Content data received:', contentData);
+        
+        // You could add content-based keyword extraction here if needed
+        // For now, we'll just pass it through to the backend
+        searchParams.set('contentData', JSON.stringify(contentData));
+      } catch (error) {
+        console.error('Failed to parse content parameter:', error);
+        // Continue without content data
+      }
+    }
+    
     // Try to connect to the actual backend
     const data = await tryBackendRequest(searchParams, apiKey);
     return NextResponse.json(data);

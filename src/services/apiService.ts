@@ -133,6 +133,15 @@ class APIClient {
     // If all backend URLs failed, throw the last error
     throw lastError || new Error('All backend URLs failed');
   }
+
+  // Context recommendation methods
+  async getContextRecommendations(contextName: string) {
+    return this.get(`/api/context-recommendations/${encodeURIComponent(contextName)}`);
+  }
+
+  async getAllContexts() {
+    return this.get('/api/context-recommendations');
+  }
 }
 
 export const apiClient = new APIClient();
