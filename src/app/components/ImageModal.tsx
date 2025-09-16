@@ -120,6 +120,7 @@ export function ImageModal({ image, onClose, onCopyUrl }: ImageModalProps) {
               className="object-contain"
               sizes="(max-width: 768px) 100vw, 60vw"
               priority
+              unoptimized={true}
             />
           </div>
 

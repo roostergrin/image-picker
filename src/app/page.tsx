@@ -6,6 +6,7 @@ import { ImageGrid } from './components/ImageGrid';
 import { ImageModal } from './components/ImageModal';
 import { Toast } from './components/Toast';
 import { apiClient, setInMemoryInternalApiKey } from '../services/apiService';
+import { ContentData } from '../utils/contentKeywordExtractor';
 
 export interface AdobeStockImage {
   id: number;
@@ -34,6 +35,7 @@ export interface SearchFilters {
   category?: string;
   creator?: string;
   keywordMode?: 'OR' | 'AND';
+  content?: ContentData;
 }
 
 export interface SearchResponse {
@@ -228,6 +230,11 @@ export default function Home() {
       if (filters.category) params.append('category', filters.category);
       if (filters.creator) params.append('creator', filters.creator);
       if (filters.keywordMode) params.append('keywordMode', filters.keywordMode);
+      
+      // Add content data as JSON if provided
+      if (filters.content) {
+        params.append('content', JSON.stringify(filters.content));
+      }
       
       const limit = 20; // Use static limit instead of pagination.limit
       params.append('limit', limit.toString());
