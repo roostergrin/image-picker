@@ -225,6 +225,7 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
                   onLoad={handlers.onLoad}
                   onError={handlers.onError}
                   sizes={`${columnWidth}px`}
+                  unoptimized={true}
                 />
 
                 {/* Overlay with Eye Icon Only */}
