@@ -1,29 +1,23 @@
-// Backend configuration based on environment
+// Backend configuration
+// ALWAYS try local first, then production as fallback
+// This ensures development always works with local backend
 const getBackendUrls = () => {
-  // Check multiple indicators for production environment
-  const useProduction = 
-    process.env.NEXT_PUBLIC_USE_PRODUCTION_BACKEND === 'true' ||
-    process.env.NODE_ENV === 'production' ||
-    typeof window !== 'undefined' && (
-      window.location.hostname !== 'localhost' && 
-      window.location.hostname !== '127.0.0.1' &&
-      !window.location.hostname.includes('localhost')
-    );
+  // Check if explicitly set to use production backend ONLY
+  const productionOnly = process.env.NEXT_PUBLIC_PRODUCTION_BACKEND_ONLY === 'true';
   
-  if (useProduction) {
-    // Production build: try production first, then local fallback
+  if (productionOnly) {
     return [
-      'https://automation-tools.wjj7y49t8p9c2.us-west-2.cs.amazonlightsail.com',
-      'http://127.0.0.1:8000',
-      'http://localhost:8000'
-    ];
-  } else {
-    // Development build: try local first
-    return [
-      'http://127.0.0.1:8000',
-      'http://localhost:8000'
+      'https://automation-tools.wjj7y49t8p9c2.us-west-2.cs.amazonlightsail.com'
     ];
   }
+  
+  // Default: try local first, then production fallback
+  // This way local development always works
+  return [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'https://automation-tools.wjj7y49t8p9c2.us-west-2.cs.amazonlightsail.com'
+  ];
 };
 
 export const BACKEND_URLS = getBackendUrls();
