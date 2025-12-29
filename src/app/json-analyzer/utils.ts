@@ -163,8 +163,11 @@ function parseSection(
 
 /**
  * Parse a page (top-level key with array of sections)
+ * @param pathPrefix - The path prefix for JSON updates (may include "pages." wrapper)
+ * @param pageData - Array of section data
+ * @param displayName - Optional clean display name (without path prefix)
  */
-function parsePage(pageName: string, pageData: unknown[]): ParsedPage {
+function parsePage(pathPrefix: string, pageData: unknown[], displayName?: string): ParsedPage {
   const sections: ParsedSection[] = [];
 
   pageData.forEach((sectionData, index) => {
@@ -173,7 +176,7 @@ function parsePage(pageName: string, pageData: unknown[]): ParsedPage {
       if ('seo' in sectionData && !('acf_fc_layout' in sectionData)) {
         return;
       }
-      sections.push(parseSection(pageName, index, sectionData));
+      sections.push(parseSection(pathPrefix, index, sectionData));
     }
   });
 
@@ -181,7 +184,7 @@ function parsePage(pageName: string, pageData: unknown[]): ParsedPage {
   const totalImagesHave = sections.reduce((sum, s) => sum + s.imagesHave, 0);
 
   return {
-    name: pageName,
+    name: displayName || pathPrefix,
     sections,
     totalImagesNeeded,
     totalImagesHave
@@ -190,20 +193,41 @@ function parsePage(pageName: string, pageData: unknown[]): ParsedPage {
 
 /**
  * Parse entire JSON structure
- * 
- * Expected format:
+ *
+ * Expected formats:
+ * 1. Direct pages:
  * {
  *   "PageName": [ ...sections... ],
  *   "AnotherPage": [ ...sections... ]
+ * }
+ *
+ * 2. Wrapped in "pages" key:
+ * {
+ *   "pages": {
+ *     "PageName": [ ...sections... ],
+ *     "AnotherPage": [ ...sections... ]
+ *   }
  * }
  */
 export function parseJsonForImages(json: Record<string, unknown>): ParsedJson {
   const pages: ParsedPage[] = [];
 
-  for (const [key, value] of Object.entries(json)) {
+  // Check if JSON has a "pages" wrapper and extract it
+  let pagesData: Record<string, unknown> = json;
+  let hasWrapper = false;
+
+  if ('pages' in json && isObject(json.pages)) {
+    pagesData = json.pages as Record<string, unknown>;
+    hasWrapper = true;
+  }
+
+  for (const [key, value] of Object.entries(pagesData)) {
     // Each top-level key should be a page with an array of sections
     if (Array.isArray(value)) {
-      pages.push(parsePage(key, value));
+      // Adjust path prefix if wrapped in "pages"
+      const pathPrefix = hasWrapper ? `pages.${key}` : key;
+      // Use the original key as display name (without "pages." prefix)
+      pages.push(parsePage(pathPrefix, value, key));
     }
   }
 
