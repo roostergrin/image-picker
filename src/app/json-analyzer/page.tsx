@@ -628,6 +628,7 @@ const ImageSlotPreview: React.FC<{
   // Determine background color based on issues
   const getBgClass = () => {
     if (!isSelected) return 'bg-gray-100 border-gray-300 opacity-60';
+    if (slot.preserveImage) return 'bg-cyan-50 border-cyan-300';
     if (slot.needsImage) return 'bg-red-50 border-red-200';
     if (hasFormatIssue && hasDuplicate) return 'bg-red-50 border-red-300';
     if (hasFormatIssue) return 'bg-orange-50 border-orange-300';
@@ -688,40 +689,48 @@ const ImageSlotPreview: React.FC<{
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`text-lg ${
-                slot.needsImage ? 'text-red-500' : 
+                slot.preserveImage ? 'text-cyan-500' :
+                slot.needsImage ? 'text-red-500' :
                 hasFormatIssue || hasDuplicate ? 'text-orange-500' : 'text-green-500'
               }`}>
-                {slot.needsImage ? '✗' : hasFormatIssue || hasDuplicate ? '⚠️' : '✓'}
+                {slot.preserveImage ? '🔒' : slot.needsImage ? '✗' : hasFormatIssue || hasDuplicate ? '⚠️' : '✓'}
               </span>
               <span className="text-sm font-medium">
                 {getSlotDisplayName(slot)}
               </span>
-              {slot.needsImage && (
+              {slot.preserveImage && (
+                <span className="bg-cyan-200 text-cyan-800 px-2 py-0.5 rounded text-xs font-medium">
+                  Preserved - Keep Current Image
+                </span>
+              )}
+              {slot.needsImage && !slot.preserveImage && (
                 <span className="bg-red-200 text-red-800 px-2 py-0.5 rounded text-xs font-medium">
                   Needs Image
                 </span>
               )}
-              {hasFormatIssue && !slot.needsImage && (
+              {hasFormatIssue && !slot.needsImage && !slot.preserveImage && (
                 <span className="bg-orange-200 text-orange-800 px-2 py-0.5 rounded text-xs font-medium">
                   Format Issue
                 </span>
               )}
-              {hasDuplicate && !slot.needsImage && (
+              {hasDuplicate && !slot.needsImage && !slot.preserveImage && (
                 <span className="bg-purple-200 text-purple-800 px-2 py-0.5 rounded text-xs font-medium">
                   Duplicate
                 </span>
               )}
             </div>
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                showSearch 
-                  ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' 
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
-            >
-              {showSearch ? 'Hide Search' : 'Find Image'}
-            </button>
+            {!slot.preserveImage && (
+              <button
+                onClick={() => setShowSearch(!showSearch)}
+                className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                  showSearch
+                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                {showSearch ? 'Hide Search' : 'Find Image'}
+              </button>
+            )}
           </div>
 
           {/* URLs - only show if has image */}
@@ -921,17 +930,20 @@ const SectionCard: React.FC<{
   const hasImages = section.imageSlots.length > 0;
   
   // Count format issues
-  const formatIssues = section.imageSlots.filter(slot => 
-    !slot.needsImage && (!isSrcFormatValid(slot.src) || !isWebpFormatValid(slot.webp))
+  const formatIssues = section.imageSlots.filter(slot =>
+    !slot.needsImage && !slot.preserveImage && (!isSrcFormatValid(slot.src) || !isWebpFormatValid(slot.webp))
   ).length;
-  
+
   // Count duplicates in this section
-  const duplicateCount = section.imageSlots.filter(slot => 
-    !slot.needsImage && (
-      (slot.src && duplicateUrls.has(slot.src)) || 
+  const duplicateCount = section.imageSlots.filter(slot =>
+    !slot.needsImage && !slot.preserveImage && (
+      (slot.src && duplicateUrls.has(slot.src)) ||
       (slot.webp && duplicateUrls.has(slot.webp))
     )
   ).length;
+
+  // Count preserved images in this section
+  const preservedCount = section.imageSlots.filter(slot => slot.preserveImage).length;
   
   return (
     <div className="bg-white rounded-lg shadow-sm border p-4">
@@ -950,6 +962,11 @@ const SectionCard: React.FC<{
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
+          {preservedCount > 0 && (
+            <span className="bg-cyan-100 text-cyan-700 px-2 py-1 rounded text-xs">
+              🔒 {preservedCount} preserved
+            </span>
+          )}
           {section.imagesHave > 0 && (
             <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
               ✓ {section.imagesHave}
@@ -1192,12 +1209,33 @@ export default function JsonAnalyzerPage() {
     return ids;
   }, [parsedJson]);
 
-  // Initialize all slots as selected when JSON is parsed
-  useEffect(() => {
-    if (allSlotIds.length > 0) {
-      setSelectedSlots(new Set(allSlotIds));
+  // Get list of slot IDs that are NOT preserved (should be selected by default)
+  const selectableSlotIds = useMemo(() => {
+    if (!parsedJson) return [];
+    const ids: string[] = [];
+    for (const page of parsedJson.pages) {
+      for (const section of page.sections) {
+        for (const slot of section.imageSlots) {
+          if (!slot.preserveImage) {
+            ids.push(slot.id);
+          }
+        }
+      }
     }
-  }, [allSlotIds]);
+    return ids;
+  }, [parsedJson]);
+
+  // Count of preserved slots
+  const preservedCount = useMemo(() => {
+    return allSlotIds.length - selectableSlotIds.length;
+  }, [allSlotIds, selectableSlotIds]);
+
+  // Initialize non-preserved slots as selected when JSON is parsed
+  useEffect(() => {
+    if (selectableSlotIds.length > 0) {
+      setSelectedSlots(new Set(selectableSlotIds));
+    }
+  }, [selectableSlotIds]);
 
   // Toggle selection for a slot with shift+click support for range selection
   const handleToggleSelection = (slotId: string, shiftKey: boolean) => {
@@ -1537,6 +1575,12 @@ export default function JsonAnalyzerPage() {
                     </p>
                     <p className="text-xs text-gray-600">Has Images</p>
                   </div>
+                  {preservedCount > 0 && (
+                    <div>
+                      <p className="text-2xl font-bold text-cyan-600">{preservedCount}</p>
+                      <p className="text-xs text-gray-600">Preserved</p>
+                    </div>
+                  )}
                   {totalDuplicates > 0 && (
                     <div>
                       <p className="text-2xl font-bold text-purple-600">{totalDuplicates}</p>

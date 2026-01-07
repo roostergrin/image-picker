@@ -15,6 +15,8 @@ export interface ImageSlot {
   alt: string;
   /** Whether this slot needs an image (src is empty) */
   needsImage: boolean;
+  /** Whether this image should be preserved (not replaced) */
+  preserveImage: boolean;
   /** Context category from image_selection_hints */
   contextCategory?: string;
   /** Parent section title */

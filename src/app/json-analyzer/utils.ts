@@ -47,7 +47,7 @@ function generateSlotId(path: string): string {
 function deepScanForImages(
   obj: unknown,
   currentPath: string,
-  sectionContext: { title?: string; layout?: string; description?: string },
+  sectionContext: { title?: string; layout?: string; description?: string; preserveImage?: boolean },
   rawSectionData?: Record<string, unknown>
 ): ImageSlot[] {
   const slots: ImageSlot[] = [];
@@ -80,6 +80,7 @@ function deepScanForImages(
         webp,
         alt,
         needsImage: !src && !webp, // Needs image if both are empty
+        preserveImage: sectionContext.preserveImage ?? false,
         contextCategory,
         sectionTitle: sectionContext.title,
         sectionLayout: sectionContext.layout,
@@ -129,13 +130,15 @@ function parseSection(
   const layoutType = (sectionData.acf_fc_layout as string) || 'unknown';
   const title = (sectionData.title as string) || undefined;
   const description = extractParagraphText(sectionData);
+  const preserveImage = sectionData.preserve_image === true;
 
   // Deep scan for all image slots, passing full section data for agent context
   const basePath = `${pageName}[${sectionIndex}]`;
   const imageSlots = deepScanForImages(sectionData, basePath, {
     title,
     layout: layoutType,
-    description
+    description,
+    preserveImage
   }, sectionData);
 
   // Filter out duplicates (parent image objects)
