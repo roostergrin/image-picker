@@ -135,21 +135,29 @@ export function ImageGrid({ images, onImageSelect, onCopyUrl }: ImageGridProps) 
   }, []);
 
   const convertToImageKitUrl = useCallback((url: string) => {
-    // Convert S3 URL to ImageKit URL
+    // Convert S3 URL to CDN URL (CloudFront if configured, otherwise ImageKit)
     // From: https://licensed-adobe-assets.s3.amazonaws.com/adobe-stock-images/filename.jpg
-    // To: https://ik.imagekit.io/9ry3lupe5/licensed-adobe-assets/filename.jpg
-    
+    // To: https://{cloudfront-domain}/standard/filename.jpg or https://ik.imagekit.io/.../filename.jpg
+
+    const cloudfrontDomain = process.env.NEXT_PUBLIC_CLOUDFRONT_IMAGE_DOMAIN || '';
+
     try {
       if (url && url.includes('licensed-adobe-assets.s3.amazonaws.com/adobe-stock-images/')) {
         const filename = url.split('/').pop();
         if (filename) {
+          const filenameWithoutExt = filename.replace(/\.[^/.]+$/, '');
+          if (cloudfrontDomain) {
+            // Use CloudFront with pre-generated standard size
+            return `https://${cloudfrontDomain}/standard/${filenameWithoutExt}.jpg`;
+          }
+          // Fallback to ImageKit
           return `https://ik.imagekit.io/9ry3lupe5/licensed-adobe-assets/${filename}`;
         }
       }
     } catch (error) {
-      console.error('Error converting to ImageKit URL:', error, 'Original URL:', url);
+      console.error('Error converting to CDN URL:', error, 'Original URL:', url);
     }
-    
+
     // If it's not an S3 URL or conversion failed, return as is
     return url;
   }, []);

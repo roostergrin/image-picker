@@ -302,12 +302,41 @@ export function updateImageSlot(
 }
 
 /**
- * Get ImageKit URL for an Adobe Stock image
+ * CloudFront domain for stock images (set via environment variable)
+ */
+const CLOUDFRONT_IMAGE_DOMAIN = process.env.NEXT_PUBLIC_CLOUDFRONT_IMAGE_DOMAIN || '';
+
+/**
+ * Get stock image URL for an image
+ * Uses CloudFront if configured, otherwise falls back to ImageKit
+ *
+ * @deprecated Use getStockImageUrl for new code. This function name is kept for backward compatibility.
  */
 export function getImageKitUrl(filename: string, width: number = 1000): { src: string; webp: string } {
+  return getStockImageUrl(filename, width >= 1920);
+}
+
+/**
+ * Get stock image URL for an image
+ * Uses CloudFront if configured, otherwise falls back to ImageKit
+ */
+export function getStockImageUrl(filename: string, isHero: boolean = false): { src: string; webp: string } {
+  // Clean the filename - remove any path prefix and extension
+  const cleanFilename = filename.split('/').pop()?.replace(/\.[^/.]+$/, '') || filename;
+
+  if (CLOUDFRONT_IMAGE_DOMAIN) {
+    const sizePrefix = isHero ? 'hero' : 'standard';
+    const baseUrl = `https://${CLOUDFRONT_IMAGE_DOMAIN}`;
+    const src = `${baseUrl}/${sizePrefix}/${cleanFilename}.jpg`;
+    const webp = `${baseUrl}/${sizePrefix}/${cleanFilename}.webp`;
+    return { src, webp };
+  }
+
+  // Fallback to ImageKit
   const baseUrl = 'https://ik.imagekit.io/rooster';
-  const src = `${baseUrl}/tr:w-${width},f-jpg,q-auto,fo-auto/${filename}`;
-  const webp = `${baseUrl}/tr:w-${width},f-webp,q-auto,fo-auto/${filename}`;
+  const transform = isHero ? 'tr:w-1920,h-1280' : 'tr:w-1000';
+  const src = `${baseUrl}/${transform},f-jpg,q-auto,fo-auto/${filename}`;
+  const webp = `${baseUrl}/${transform},f-webp,q-auto,fo-auto/${filename}`;
   return { src, webp };
 }
 
