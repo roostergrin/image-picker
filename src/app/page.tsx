@@ -7,6 +7,7 @@ import { ImageModal } from './components/ImageModal';
 import { Toast } from './components/Toast';
 import { apiClient, setInMemoryInternalApiKey } from '../services/apiService';
 import { ContentData } from '../utils/contentKeywordExtractor';
+import { safeGetItem, safeSetItem, safeRemoveItem } from '../utils/safeStorage';
 
 export interface AdobeStockImage {
   id: number;
@@ -69,7 +70,7 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   // Attempt to load and verify a saved token on mount
   useEffect(() => {
-    const saved = localStorage.getItem('INTERNAL_API_TOKEN') || localStorage.getItem('internalApiToken');
+    const saved = safeGetItem('INTERNAL_API_TOKEN') || safeGetItem('internalApiToken');
     
     if (!saved) {
       setInitialized(true);
@@ -89,8 +90,8 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       } catch (err) {
         setInMemoryInternalApiKey(null);
         window.__INTERNAL_API_TOKEN__ = undefined;
-        localStorage.removeItem('INTERNAL_API_TOKEN');
-        localStorage.removeItem('internalApiToken');
+        safeRemoveItem('INTERNAL_API_TOKEN');
+        safeRemoveItem('internalApiToken');
         setVerified(false);
         setToken('');
         console.error('Token verification failed:', err);
@@ -114,11 +115,7 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       // Only set verified to true if we get a successful response
       if (response && response.status === 200) {
         setVerified(true);
-        try {
-          localStorage.setItem('INTERNAL_API_TOKEN', token);
-        } catch {
-          // ignore storage failures
-        }
+        safeSetItem('INTERNAL_API_TOKEN', token);
       } else {
         throw new Error('Health check failed');
       }

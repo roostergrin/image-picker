@@ -6,6 +6,7 @@ import { Toast } from '../components/Toast';
 import { ContextGrid } from '../components/ContextGrid';
 import { apiClient, setInMemoryInternalApiKey } from '../../services/apiService';
 import { AdobeStockImage } from '../page';
+import { safeGetItem, safeRemoveItem } from '../../utils/safeStorage';
 
 declare global {
   interface Window { __INTERNAL_API_TOKEN__?: string }
@@ -20,7 +21,7 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       setChecking(true);
       
       // Check localStorage for saved token
-      const savedToken = localStorage.getItem('INTERNAL_API_TOKEN') || localStorage.getItem('internalApiToken');
+      const savedToken = safeGetItem('INTERNAL_API_TOKEN') || safeGetItem('internalApiToken');
       
       if (!savedToken) {
         // No token found, redirect to main auth page
@@ -43,8 +44,8 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         // Token is invalid, clear it and redirect to main auth page
         setInMemoryInternalApiKey(null);
         window.__INTERNAL_API_TOKEN__ = undefined;
-        localStorage.removeItem('INTERNAL_API_TOKEN');
-        localStorage.removeItem('internalApiToken');
+        safeRemoveItem('INTERNAL_API_TOKEN');
+        safeRemoveItem('internalApiToken');
         window.location.href = '/';
         return;
       } finally {

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { parseJsonForImages, updateImageSlot, getImageKitUrl, getSlotDisplayName } from './utils';
 import { ParsedJson, ParsedSection, ImageSlot, ImageAgentResult, ImageAgentResponse } from './types';
 import { apiClient, setInMemoryInternalApiKey } from '@/services/apiService';
+import { safeGetItem, safeRemoveItem } from '@/utils/safeStorage';
 
 // Token gate component (matches pattern from content-test page)
 const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -16,9 +17,7 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       setChecking(true);
       
       // Check localStorage for saved token
-      const savedToken = typeof window !== 'undefined' 
-        ? (localStorage.getItem('INTERNAL_API_TOKEN') || localStorage.getItem('internalApiToken'))
-        : null;
+      const savedToken = safeGetItem('INTERNAL_API_TOKEN') || safeGetItem('internalApiToken');
       
       if (!savedToken) {
         // No token found, redirect to main auth page
@@ -39,8 +38,8 @@ const TokenGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       } catch {
         // Token is invalid, clear it and redirect to main auth page
         setInMemoryInternalApiKey(null);
-        localStorage.removeItem('INTERNAL_API_TOKEN');
-        localStorage.removeItem('internalApiToken');
+        safeRemoveItem('INTERNAL_API_TOKEN');
+        safeRemoveItem('internalApiToken');
         window.location.href = '/';
         return;
       } finally {
